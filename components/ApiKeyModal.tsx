@@ -5,9 +5,10 @@ interface ApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (key: string) => void;
+  isMandatory?: boolean;
 }
 
-const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSave }) => {
+const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSave, isMandatory = false }) => {
   const [key, setKey] = useState('');
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
 
@@ -40,15 +41,20 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSave }) =>
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-rpg-gray border border-rpg-dim rounded-lg p-6 w-full max-w-md shadow-2xl">
+      <div className="bg-rpg-gray border border-rpg-dim rounded-lg p-6 w-full max-w-md shadow-2xl relative">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-rpg-accent">API KEY CONFIGURATION</h2>
+          <h2 className="text-xl font-bold text-rpg-accent">
+            {isMandatory ? 'SYSTEM INITIALIZATION' : 'API KEY CONFIGURATION'}
+          </h2>
           <div className="w-2 h-2 rounded-full bg-rpg-accent animate-pulse"></div>
         </div>
         
         <p className="text-xs text-gray-400 mb-6 leading-relaxed">
-          Google Gemini API 키를 입력하십시오.<br/>
-          입력된 키는 Base64로 암호화되어 사용자의 로컬 브라우저(LocalStorage)에만 저장됩니다.
+          {isMandatory 
+            ? "게임 시스템을 가동하기 위해 Google Gemini API 키가 필요합니다." 
+            : "Google Gemini API 키를 수정합니다."}
+          <br/>
+          입력된 키는 Base64로 암호화되어 로컬 스토리지에 저장됩니다.
         </p>
         
         <div className="space-y-4">
@@ -82,18 +88,20 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSave }) =>
         </div>
 
         <div className="mt-8 flex justify-end gap-3 border-t border-rpg-dim/30 pt-4">
-          <button 
-            onClick={onClose} 
-            className="px-4 py-2 text-gray-500 hover:text-white text-sm transition-colors"
-          >
-            닫기
-          </button>
+          {!isMandatory && (
+            <button 
+              onClick={onClose} 
+              className="px-4 py-2 text-gray-500 hover:text-white text-sm transition-colors"
+            >
+              닫기
+            </button>
+          )}
           <button 
             onClick={handleSave}
             disabled={!key}
             className="px-6 py-2 bg-rpg-accent hover:bg-red-600 text-white font-bold rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-red-900/20"
           >
-            저장 및 적용
+            {isMandatory ? '게임 시작' : '저장 및 적용'}
           </button>
         </div>
       </div>

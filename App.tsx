@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [lastParsedResponse, setLastParsedResponse] = useState<ParsedResponse | null>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -49,6 +50,7 @@ const App: React.FC = () => {
         timestamp: Date.now()
       };
       setMessages([errorMsg]);
+      setHasKey(false);
       setIsKeyModalOpen(true);
     } finally {
       setLoadingState(LoadingState.IDLE);
@@ -63,16 +65,20 @@ const App: React.FC = () => {
         try {
           const key = atob(savedKey);
           setDynamicApiKey(key);
+          setHasKey(true);
           await startGame();
         } catch (e) {
           console.error("Key load error", e);
+          setHasKey(false);
           setIsKeyModalOpen(true);
         }
       } else {
         // Fallback to env key if available, otherwise open modal
         if (process.env.API_KEY) {
+           setHasKey(true);
            await startGame();
         } else {
+           setHasKey(false);
            setIsKeyModalOpen(true);
         }
       }
@@ -123,6 +129,8 @@ const App: React.FC = () => {
 
   const handleKeySave = (key: string) => {
     setDynamicApiKey(key);
+    setHasKey(true);
+    setIsKeyModalOpen(false);
     startGame(); // Restart game with new key
   };
 
@@ -165,7 +173,7 @@ const App: React.FC = () => {
 
       {/* Main Chat Container */}
       <main className="pt-20 pb-48 max-w-4xl mx-auto px-4 min-h-screen flex flex-col">
-        {messages.length === 0 && loadingState === LoadingState.IDLE && !isKeyModalOpen && (
+        {messages.length === 0 && loadingState === LoadingState.IDLE && (
            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500">
               <p>초기화 대기 중...</p>
            </div>
@@ -212,6 +220,7 @@ const App: React.FC = () => {
         isOpen={isKeyModalOpen} 
         onClose={() => setIsKeyModalOpen(false)}
         onSave={handleKeySave}
+        isMandatory={!hasKey}
       />
 
       {/* Input / Action Area */}
