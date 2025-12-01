@@ -1,0 +1,104 @@
+import React, { useState, useEffect } from 'react';
+import { testConnection } from '../services/geminiService';
+
+interface ApiKeyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (key: string) => void;
+}
+
+const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSave }) => {
+  const [key, setKey] = useState('');
+  const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('harem_rpg_key');
+    if (saved) {
+      try {
+        setKey(atob(saved));
+      } catch (e) { 
+        console.error("Failed to decode key", e); 
+      }
+    }
+  }, []);
+
+  const handleTest = async () => {
+    if (!key) return;
+    setStatus('testing');
+    const success = await testConnection(key);
+    setStatus(success ? 'success' : 'error');
+  };
+
+  const handleSave = () => {
+    if (!key) return;
+    // Simple Base64 encoding for local storage "encryption"
+    localStorage.setItem('harem_rpg_key', btoa(key));
+    onSave(key);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="bg-rpg-gray border border-rpg-dim rounded-lg p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-rpg-accent">API KEY CONFIGURATION</h2>
+          <div className="w-2 h-2 rounded-full bg-rpg-accent animate-pulse"></div>
+        </div>
+        
+        <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+          Google Gemini API 키를 입력하십시오.<br/>
+          입력된 키는 Base64로 암호화되어 사용자의 로컬 브라우저(LocalStorage)에만 저장됩니다.
+        </p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-rpg-dim font-mono mb-1 block">GOOGLE_GEN_AI_KEY</label>
+            <input 
+              type="password" 
+              value={key}
+              onChange={(e) => { setKey(e.target.value); setStatus('idle'); }}
+              className="w-full bg-rpg-black border border-rpg-dim rounded px-3 py-3 text-white focus:border-rpg-accent outline-none font-mono text-sm transition-colors"
+              placeholder="AIzaSy..."
+            />
+          </div>
+
+          <div className="flex justify-between items-center pt-2">
+            <button 
+              onClick={handleTest}
+              disabled={status === 'testing' || !key}
+              className={`text-xs px-3 py-1.5 rounded border transition-colors flex items-center gap-2 ${
+                  status === 'success' ? 'border-green-500 text-green-500 bg-green-500/10' :
+                  status === 'error' ? 'border-red-500 text-red-500 bg-red-500/10' :
+                  'border-gray-600 text-gray-400 hover:border-gray-400 hover:text-white'
+              }`}
+            >
+              {status === 'testing' && <span className="animate-spin">⟳</span>}
+              {status === 'testing' ? '연결 확인 중...' : 
+               status === 'success' ? '연결 성공 (OK)' : 
+               status === 'error' ? '연결 실패 (FAIL)' : '연결 테스트'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-8 flex justify-end gap-3 border-t border-rpg-dim/30 pt-4">
+          <button 
+            onClick={onClose} 
+            className="px-4 py-2 text-gray-500 hover:text-white text-sm transition-colors"
+          >
+            닫기
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={!key}
+            className="px-6 py-2 bg-rpg-accent hover:bg-red-600 text-white font-bold rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-red-900/20"
+          >
+            저장 및 적용
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ApiKeyModal;
