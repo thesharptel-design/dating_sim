@@ -12,52 +12,34 @@ export const parseResponse = (rawText: string): ParsedResponse => {
 
   if (match) {
     statusBlock = match[1];
-    // Remove the code block from the narrative display to avoid duplication,
-    // or keep it if we want to show it inline.
-    // Let's keep it in narrative but also extract it for a special view if needed.
-    // For this specific UI, we will strip it from narrative to show it in a dedicated "Terminal" window.
+    // Remove the code block from the narrative display to avoid duplication
     narrative = rawText.replace(match[0], '').trim();
   }
 
-  // 2. Extract Options
-  // Look for patterns like "1. [Option Name] Description" or "1. Option" at the end of text
-  const optionRegex = /(\d+)\.\s*(?:\[(.*?)\])?\s*(.*)/g;
-  
-  // We strictly want options that appear in the "Step 3" section.
-  // However, simple regex scanning usually works well enough for RPG bots.
-  
-  let matchOption;
-  while ((matchOption = optionRegex.exec(rawText)) !== null) {
-    // Basic filter: Options are usually at the end. 
-    // If the index is very early, it might be part of the narrative list.
-    // But for now, let's grab all numbered lists that look like choices.
-    
-    // Check if it's the specific "Step" header
-    if(matchOption[0].includes("Step") || matchOption[3].includes("Step")) continue;
+  // 2. Extract Options STRICTLY from "Step 3" section
+  // Find the header for Step 3
+  const step3HeaderRegex = /Step\s*3.*?(?:\n|$)/i;
+  const step3Match = rawText.match(step3HeaderRegex);
 
-    options.push({
-      id: matchOption[1],
-      label: matchOption[2] || `선택지 ${matchOption[1]}`,
-      text: matchOption[3]
-    });
-  }
+  if (step3Match && step3Match.index !== undefined) {
+    // Isolate the content strictly AFTER the Step 3 header
+    const step3Content = rawText.substring(step3Match.index + step3Match[0].length);
 
-  // Fallback: If no options detected via Regex, check if "Step 3" exists and parse lines manually
-  if (options.length === 0) {
-    const step3Index = rawText.indexOf("Step 3");
-    if (step3Index !== -1) {
-        const afterStep3 = rawText.substring(step3Index);
-        const lines = afterStep3.split('\n');
-        lines.forEach(line => {
-            const lineMatch = line.match(/^(\d+)\.\s*(.*)/);
-            if (lineMatch) {
-                 options.push({
-                    id: lineMatch[1],
-                    label: `선택 ${lineMatch[1]}`,
-                    text: lineMatch[2]
-                });
-            }
-        });
+    // Regex to match options: "1. [Label] Text" or "1. Text"
+    // We use the 'm' flag to ensure we match start of lines, preventing inline numbering matches
+    const optionRegex = /^(\d+)\.\s*(?:\[(.*?)\])?\s*(.*)$/gm;
+
+    let matchOption;
+    while ((matchOption = optionRegex.exec(step3Content)) !== null) {
+      // matchOption[1] = id (e.g. "1")
+      // matchOption[2] = label inside brackets (e.g. "대화") or undefined
+      // matchOption[3] = remaining text (e.g. "그녀에게 말을 건다")
+      
+      options.push({
+        id: matchOption[1],
+        label: matchOption[2] || `선택 ${matchOption[1]}`,
+        text: matchOption[3].trim()
+      });
     }
   }
 
