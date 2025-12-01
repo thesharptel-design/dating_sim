@@ -12,29 +12,34 @@ export const parseResponse = (rawText: string): ParsedResponse => {
 
   if (match) {
     statusBlock = match[1];
-    // Remove the code block from the narrative display to avoid duplication
+    // Remove the code block from the narrative display
     narrative = rawText.replace(match[0], '').trim();
   }
 
-  // 2. Extract Options STRICTLY from "Step 3" section
-  // Find the header for Step 3
-  const step3HeaderRegex = /Step\s*3.*?(?:\n|$)/i;
-  const step3Match = rawText.match(step3HeaderRegex);
+  // 2. Extract Options strictly from "Step 3" section
+  // Find the "Step 3" header to identify the options section.
+  const step3Regex = /Step\s*3/i;
+  const step3Match = rawText.match(step3Regex);
+
+  let textToScan = "";
 
   if (step3Match && step3Match.index !== undefined) {
-    // Isolate the content strictly AFTER the Step 3 header
-    const step3Content = rawText.substring(step3Match.index + step3Match[0].length);
+    // Only scan text AFTER the "Step 3" header
+    textToScan = rawText.substring(step3Match.index);
+  } else {
+    // If "Step 3" is missing, we assume there are no structured options provided by the GM.
+    // This prevents numbers in the narrative (Step 1) from being parsed as buttons.
+    textToScan = ""; 
+  }
 
-    // Regex to match options: "1. [Label] Text" or "1. Text"
-    // We use the 'm' flag to ensure we match start of lines, preventing inline numbering matches
-    const optionRegex = /^(\d+)\.\s*(?:\[(.*?)\])?\s*(.*)$/gm;
-
+  if (textToScan) {
+    const optionRegex = /(\d+)\.\s*(?:\[(.*?)\])?\s*(.*)/g;
     let matchOption;
-    while ((matchOption = optionRegex.exec(step3Content)) !== null) {
-      // matchOption[1] = id (e.g. "1")
-      // matchOption[2] = label inside brackets (e.g. "대화") or undefined
-      // matchOption[3] = remaining text (e.g. "그녀에게 말을 건다")
-      
+    
+    while ((matchOption = optionRegex.exec(textToScan)) !== null) {
+      // Avoid matching the "Step 3" line itself if it happens to look like a list item (unlikely but safe)
+      if (matchOption[0].toLowerCase().includes("step")) continue;
+
       options.push({
         id: matchOption[1],
         label: matchOption[2] || `선택 ${matchOption[1]}`,

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
 
@@ -73,7 +74,7 @@ export const initChat = async (): Promise<string> => {
   try {
     chatSession = createSession('gemini-3-pro-preview');
     const response = await chatSession.sendMessage({
-      message: "시스템을 초기화하고 GM 페르소나 선택과 캐릭터 프리셋을 보여주세요."
+      message: "시스템을 가동합니다. [Start Sequence]의 Phase 1(GM 페르소나 선택) 화면만 출력하십시오. 선택지 버튼 생성을 위해 'Step 3. [선택지]' 형식을 반드시 지키십시오."
     });
     return response.text || "시스템 초기화 오류";
   } catch (error) {
@@ -83,7 +84,7 @@ export const initChat = async (): Promise<string> => {
     try {
       chatSession = createSession('gemini-2.5-flash');
       const response = await chatSession.sendMessage({
-        message: "시스템을 초기화하고 GM 페르소나 선택과 캐릭터 프리셋을 보여주세요."
+        message: "시스템을 가동합니다. [Start Sequence]의 Phase 1(GM 페르소나 선택) 화면만 출력하십시오. 선택지 버튼 생성을 위해 'Step 3. [선택지]' 형식을 반드시 지키십시오."
       });
       return response.text || "시스템 초기화 오류 (Fallback)";
     } catch (fallbackError) {
