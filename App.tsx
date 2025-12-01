@@ -42,16 +42,16 @@ const App: React.FC = () => {
       ]);
     } catch (e) {
       console.error(e);
-      // If init fails, likely due to API key issues, prompt user
+      // If init fails, we show the error but DO NOT force the modal open again.
+      // This prevents an infinite loop if the key is valid but the model is erroring.
       const errorMsg: Message = {
         id: 'error',
         role: 'model',
-        text: "시스템 초기화 실패: API Key를 확인해주세요.",
+        text: "시스템 초기화 실패: 연결 상태를 확인하거나 API Key를 점검해주세요. 상단 'KEY' 버튼을 눌러 설정을 변경할 수 있습니다.",
         timestamp: Date.now()
       };
       setMessages([errorMsg]);
-      setHasKey(false);
-      setIsKeyModalOpen(true);
+      // We do NOT setHasKey(false) here, to avoid trapping the user in the modal.
     } finally {
       setLoadingState(LoadingState.IDLE);
     }
@@ -175,7 +175,7 @@ const App: React.FC = () => {
       <main className="pt-20 pb-48 max-w-4xl mx-auto px-4 min-h-screen flex flex-col">
         {messages.length === 0 && loadingState === LoadingState.IDLE && (
            <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500">
-              <p>초기화 대기 중...</p>
+              <p>시스템 초기화 대기 중...</p>
            </div>
         )}
 

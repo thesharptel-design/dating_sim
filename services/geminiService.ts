@@ -37,12 +37,10 @@ export const testConnection = async (key: string): Promise<boolean> => {
   }
 };
 
-export const initChat = async (): Promise<string> => {
+const createSession = (modelName: string) => {
   const ai = getAI();
-  
-  // Create a new chat session with the heavy system instruction
-  chatSession = ai.chats.create({
-    model: 'gemini-3-pro-preview', // High intelligence model for complex RPG logic
+  return ai.chats.create({
+    model: modelName,
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
       temperature: 1, // High creativity for "emergent personhood"
@@ -68,15 +66,30 @@ export const initChat = async (): Promise<string> => {
       ],
     },
   });
+};
 
+export const initChat = async (): Promise<string> => {
+  // Primary attempt with Pro model
   try {
+    chatSession = createSession('gemini-3-pro-preview');
     const response = await chatSession.sendMessage({
       message: "시스템을 초기화하고 GM 페르소나 선택과 캐릭터 프리셋을 보여주세요."
     });
     return response.text || "시스템 초기화 오류";
   } catch (error) {
-    console.error("Failed to init chat", error);
-    throw error; // Re-throw to handle in UI
+    console.warn("Failed to init with Pro model, falling back to Flash...", error);
+    
+    // Fallback attempt with Flash model
+    try {
+      chatSession = createSession('gemini-2.5-flash');
+      const response = await chatSession.sendMessage({
+        message: "시스템을 초기화하고 GM 페르소나 선택과 캐릭터 프리셋을 보여주세요."
+      });
+      return response.text || "시스템 초기화 오류 (Fallback)";
+    } catch (fallbackError) {
+      console.error("Failed to init chat with fallback", fallbackError);
+      throw fallbackError; // Re-throw to handle in UI
+    }
   }
 };
 
