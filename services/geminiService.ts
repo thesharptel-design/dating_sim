@@ -74,7 +74,7 @@ export const initChat = async (): Promise<string> => {
   try {
     chatSession = createSession('gemini-3-pro-preview');
     const response = await chatSession.sendMessage({
-      message: "시스템을 가동합니다. [Start Sequence]의 Phase 1(GM 페르소나 선택) 화면만 출력하십시오. 선택지 버튼 생성을 위해 'Step 3. [선택지]' 형식을 반드시 지키십시오."
+      message: "시스템을 가동합니다. [Start Sequence]의 Phase 1 지침에 따라, 게임의 세계관 인트로와 GM 페르소나 선택 화면을 출력하십시오."
     });
     return response.text || "시스템 초기화 오류";
   } catch (error) {
@@ -84,7 +84,7 @@ export const initChat = async (): Promise<string> => {
     try {
       chatSession = createSession('gemini-2.5-flash');
       const response = await chatSession.sendMessage({
-        message: "시스템을 가동합니다. [Start Sequence]의 Phase 1(GM 페르소나 선택) 화면만 출력하십시오. 선택지 버튼 생성을 위해 'Step 3. [선택지]' 형식을 반드시 지키십시오."
+        message: "시스템을 가동합니다. [Start Sequence]의 Phase 1 지침에 따라, 게임의 세계관 인트로와 GM 페르소나 선택 화면을 출력하십시오."
       });
       return response.text || "시스템 초기화 오류 (Fallback)";
     } catch (fallbackError) {
@@ -106,6 +106,6 @@ export const sendMessage = async (userMessage: string): Promise<string> => {
     return response.text || "응답 없음";
   } catch (error) {
     console.error("SendMessage Error", error);
-    return "통신 오류가 발생했습니다. (Safety Filter Triggered or Network Error)";
+    throw error; // Throwing error to trigger retry logic in UI
   }
 };

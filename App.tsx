@@ -24,37 +24,42 @@ const App: React.FC = () => {
     scrollToBottom();
   }, [messages, loadingState]);
 
-  const startGame = async () => {
-    setLoadingState(LoadingState.LOADING);
-    setMessages([]); // Clear previous messages on restart
+  const attemptStartGame = async () => {
     try {
       const initialText = await initChat();
       const parsed = parseResponse(initialText);
       setLastParsedResponse(parsed);
       
-      setMessages([
+      setMessages(prev => [
+        ...prev,
         {
-          id: 'init',
+          id: 'init-' + Date.now(),
           role: 'model',
           text: initialText,
           timestamp: Date.now()
         }
       ]);
+      setLoadingState(LoadingState.IDLE);
     } catch (e) {
       console.error(e);
-      // If init fails, we show the error but DO NOT force the modal open again.
-      // This prevents an infinite loop if the key is valid but the model is erroring.
-      const errorMsg: Message = {
-        id: 'error',
-        role: 'model',
-        text: "시스템 초기화 실패: 연결 상태를 확인하거나 API Key를 점검해주세요. 상단 'KEY' 버튼을 눌러 설정을 변경할 수 있습니다.",
-        timestamp: Date.now()
-      };
-      setMessages([errorMsg]);
-      // We do NOT setHasKey(false) here, to avoid trapping the user in the modal.
-    } finally {
-      setLoadingState(LoadingState.IDLE);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: 'retry-' + Date.now(),
+          role: 'model',
+          text: "오류가 발생하여, 다시 진행합니다.",
+          timestamp: Date.now()
+        }
+      ]);
+      // Retry after delay
+      setTimeout(() => attemptStartGame(), 2000);
     }
+  };
+
+  const startGame = async () => {
+    setLoadingState(LoadingState.LOADING);
+    setMessages([]); // Clear previous messages on restart
+    await attemptStartGame();
   };
 
   // Initial Boot Logic
@@ -87,19 +92,7 @@ const App: React.FC = () => {
     bootstrap();
   }, []);
 
-  const handleSendMessage = async (text: string) => {
-    if (loadingState === LoadingState.LOADING) return;
-
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      text: text,
-      timestamp: Date.now()
-    };
-
-    setMessages(prev => [...prev, userMsg]);
-    setLoadingState(LoadingState.LOADING);
-
+  const attemptSendMessage = async (text: string) => {
     try {
       const responseText = await sendMessage(text);
       const parsed = parseResponse(responseText);
@@ -113,18 +106,35 @@ const App: React.FC = () => {
       };
 
       setMessages(prev => [...prev, modelMsg]);
+      setLoadingState(LoadingState.IDLE);
     } catch (error) {
       console.error(error);
       const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: 'retry-' + Date.now(),
         role: 'model',
-        text: "시스템 오류: 연결이 끊어졌거나 API가 응답하지 않습니다.",
-        timestamp: Date.now() + 1
+        text: "오류가 발생하여, 다시 진행합니다.",
+        timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMsg]);
-    } finally {
-      setLoadingState(LoadingState.IDLE);
+      // Retry after delay
+      setTimeout(() => attemptSendMessage(text), 2000);
     }
+  };
+
+  const handleSendMessage = async (text: string) => {
+    if (loadingState === LoadingState.LOADING) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      text: text,
+      timestamp: Date.now()
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setLoadingState(LoadingState.LOADING);
+
+    await attemptSendMessage(text);
   };
 
   const handleKeySave = (key: string) => {
