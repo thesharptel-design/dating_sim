@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface TerminalViewProps {
@@ -21,13 +22,29 @@ const TerminalView: React.FC<TerminalViewProps> = ({ content }) => {
         return <span key={index} className="text-cyan-400 font-semibold">{part}</span>;
       }
       
-      // Process the rest: Numbers and Stat Changes (+/-)
-      const subParts = part.split(/([+\-]?\d+(?:,\d{3})*(?:\.\d+)?(?:cm|kg|%|원|명)?)/g);
+      // Process the rest: Numbers, Parentheses like (+5), and regular text
+      // Regex explanation:
+      // 1. (\([+-]?\d+\)) -> Matches (+5), (-10)
+      // 2. ([+\-]?\d+(?:,\d{3})*(?:\.\d+)?(?:cm|kg|%|원|명)?) -> Matches numbers like 1,000원, 50, -5
+      const subParts = part.split(/(\([+-]?\d+\))|([+\-]?\d+(?:,\d{3})*(?:\.\d+)?(?:cm|kg|%|원|명)?)/g);
       
       return (
         <span key={index}>
           {subParts.map((sub, subIndex) => {
-              // Stat Change (+5, -10)
+              if (!sub) return null;
+
+              // 1. Matches (+5) or (-5)
+              if (/^\([+-]?\d+\)$/.test(sub)) {
+                   const numVal = parseInt(sub.replace(/[()]/g, ''), 10);
+                   const isPos = numVal >= 0;
+                   return (
+                     <span key={subIndex} className={`font-bold text-xs ml-1 ${isPos ? 'text-blue-400' : 'text-red-400'}`}>
+                       {sub}
+                     </span>
+                   );
+              }
+
+              // 2. Stat Change without parens (+5, -10) - Legacy fallback
               if (/^[+\-]\d+/.test(sub)) {
                    const isPos = sub.startsWith('+');
                    return (
@@ -36,11 +53,13 @@ const TerminalView: React.FC<TerminalViewProps> = ({ content }) => {
                      </span>
                    );
               }
-              // Normal Numbers
+
+              // 3. Normal Numbers
               if (/^\d/.test(sub)) {
                   return <span key={subIndex} className="text-green-400 font-mono font-bold">{sub}</span>
               }
-              // Regular text
+
+              // 4. Regular text
               return <span key={subIndex} className="text-gray-300">{sub}</span>
           })}
         </span>
@@ -100,16 +119,16 @@ const TerminalView: React.FC<TerminalViewProps> = ({ content }) => {
              );
           }
 
-          // 4. Heroine List Items (e.g. "1. [Name]")
-          if (/^\d+\./.test(text)) {
+          // 4. Stat Lines (Check for brackets)
+          if (text.includes('[')) {
              return (
-               <div key={index} className="mb-1 pl-2 text-gray-300 hover:bg-white/5 rounded px-1 transition-colors">
+                <div key={index} className="mb-1 pl-1 border-l border-transparent hover:border-gray-700 flex flex-wrap gap-x-3 gap-y-1">
                   {parseStatLine(text)}
-               </div>
-             )
+                </div>
+             );
           }
 
-          // 5. Default Lines (likely stats)
+          // 5. Default Lines
           return (
              <div key={index} className="text-gray-400 mb-1 pl-1 border-l border-transparent hover:border-gray-700">
                {parseStatLine(text)}
